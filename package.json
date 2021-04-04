@@ -1,0 +1,19 @@
+{
+  "name": "chat-node-socket",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parse": "^4.15.3",
+    "express": "^4.17.1",
+    "gulp": "^4.0.2",
+    "locutus": "^2.0.14",
+    "socket.io": "^4.0.1"
+  }
+}
