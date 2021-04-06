@@ -33,6 +33,6 @@ const renderMessage = message => {
   div.classList.add('render-message')
   div.innerHTML = message
   chatWindow.appendChild(div)
-  PlaySound()
+  if (document.getElementById("audiocue").checked) { PlaySound() }
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
