@@ -7,7 +7,7 @@ const path = require('path')
 const { spawn } = require('child_process')
 var fs = require('fs');
 var parse = require("csv-parse");
-var JamChat=fs.createReadStream('/tmp/JamChat');
+var JamChat=fs.createReadStream('/tmp/JamChat-22124');
 var csvFile = '/tmp/JamulusClients.csv';
 
 server.listen(port, () => {
