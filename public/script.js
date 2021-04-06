@@ -5,6 +5,11 @@ const chatWindow = document.querySelector('.chat-window')
 const userName = document.getElementById('name')
 const usersTable = document.querySelector('.usersTable')
 
+function PlaySound() {
+  var sound = new Audio("sounds/new_message.wav");
+  sound.play();
+}
+
 socket.emit('chat', userName.value, '...connected');
 
 chat.addEventListener('submit', event => {
@@ -28,5 +33,6 @@ const renderMessage = message => {
   div.classList.add('render-message')
   div.innerHTML = message
   chatWindow.appendChild(div)
+  PlaySound()
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
