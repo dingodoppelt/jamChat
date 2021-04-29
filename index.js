@@ -9,6 +9,7 @@ var fs = require('fs');
 var parse = require("csv-parse");
 var JamChat=fs.createReadStream('/tmp/JamChat-22124');
 var csvFile = '/tmp/JamulusClients.csv';
+var connectedClients = {};
 
 server.listen(port, () => {
   console.log(`Server running on port: ${port}`)
@@ -18,14 +19,26 @@ app.use(express.static(path.join(__dirname + '/public')))
 
 io.on('connection', socket => {
     fs.createReadStream(csvFile).pipe(parse({ delimiter: ';' }, processData));
+    socket.on('clientInfo', (userName) => {
+        io.emit('userConnected', userName)
+        for (const [id, [name, ip]] of Object.entries(connectedClients)) {
+            socket.emit('userConnected', name);
+        }
+        connectedClients[socket.id] = [ userName, socket.client.conn.remoteAddress ]
+        console.log(connectedClients);
+    })
     socket.on('chat', (user, message) => {
     const php = spawn('php', ['sendChat.php', user, message])
-    //console.log('From client: ', message)
-  })
-})
+    })
+    socket.on("disconnecting", () => {
+        if (connectedClients[socket.id] != undefined ) {
+            io.emit('userDisconnected', connectedClients[socket.id][0])
+            delete connectedClients[socket.id]
+        }
+        });
+    })
 
 JamChat.on('data', data => {
-        //console.log(str.toString());
         io.emit('chat', data.toString())
 })
 
