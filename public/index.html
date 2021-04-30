@@ -32,11 +32,13 @@
       <table id="usersTable" class="usersTable"></table>
     </div>
   <script>
-     {
-        var person = prompt("Please enter your name", "");
-        while (person == null || person.replace(/\s/g,'') == '') {
-            person = prompt("Please enter your name", "");
-        }
+    {
+        var storedName = window.localStorage && window.localStorage.getItem("JamChatPerson");
+        var person;
+        do {
+            person = prompt("Please enter your name", storedName || "");
+        } while (person == null || person.replace(/\s/g,'') == '');
+        if (window.localStorage) window.localStorage.setItem("JamChatPerson", person);
         document.getElementById("name").value = person;
         document.getElementById("title").innerHTML = " - " +person;
     }
