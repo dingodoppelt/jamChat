@@ -41,7 +41,7 @@ io.on('connection', socket => {
 })
 
 JamChat.on('data', data => {
-        io.emit('chat', data.toString('latin1'))
+        io.emit('chat', data.toString('utf8'))
 })
 
 class User {
