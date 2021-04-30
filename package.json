@@ -1,20 +1,27 @@
 {
-  "name": "chat-node-socket",
+  "name": "jamchat",
   "version": "1.0.0",
-  "description": "",
+  "description": "tool to chat with a jamulus server running on the same machine",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "buffermaker": "^1.2.1",
-    "csv-parse": "^4.15.3",
+    "csv-parse": "^4.15.4",
     "express": "^4.17.1",
-    "gulp": "^4.0.2",
-    "locutus": "^2.0.14",
     "socket.io": "^4.0.1"
-  }
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \\\"Error: no test specified\\\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com//dingodoppelt/jamChat"
+  },
+  "keywords": [
+    "jamulus",
+    "chat",
+    "stream"
+  ],
+  "author": "dingodoppelt",
+  "license": "ISC"
 }
