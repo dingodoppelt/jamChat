@@ -20,6 +20,9 @@ chat.addEventListener('submit', event => {
       Input.value = ''
   }
 })
+socket.io.on('reconnect', () => {
+    socket.emit('chat', userName.value, '...reconnected');
+})
 
 socket.on('chat', message => {
     renderMessage(message)

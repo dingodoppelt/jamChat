@@ -37,8 +37,8 @@ io.on('connection', socket => {
             io.emit('userDisconnected', connectedClients[socket.id][0])
             delete connectedClients[socket.id]
         }
-        });
     })
+})
 
 JamChat.on('data', data => {
         io.emit('chat', data.toString('latin1'))
