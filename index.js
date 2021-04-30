@@ -1,15 +1,19 @@
+var jamServerPort = 22124;
+var chatFile = '/tmp/JamChat-'+jamServerPort;
+var csvFile = '/tmp/JamulusClients.csv';
 const express = require('express')
 const app = express()
 const server = require('http').createServer(app)
 const port = process.env.PORT || 32123
 const io = require('socket.io')(server)
 const path = require('path')
-const { spawn } = require('child_process')
 var fs = require('fs');
 var parse = require("csv-parse");
-var JamChat=fs.createReadStream('/tmp/JamChat-22124');
-var csvFile = '/tmp/JamulusClients.csv';
+var JamChat=fs.createReadStream(chatFile);
 var connectedClients = {};
+const dgram = require('dgram');
+const udp_socket = dgram.createSocket('udp4');
+const CRC = require('./CRC.js')
 
 server.listen(port, () => {
   console.log(`Server running on port: ${port}`)
@@ -28,7 +32,25 @@ io.on('connection', socket => {
         console.log(connectedClients);
     })
     socket.on('chat', (user, message) => {
-    const php = spawn('php', ['sendChat.php', user, message])
+        const BufferMaker = require('buffermaker')
+        message = '<b>***Message from listener ' + user + ':</b> ' + message;
+        var id = 1019;
+        var messageBuffer = new BufferMaker()
+                            .UInt16LE(0x0000)
+                            .UInt16LE(id)
+                            .UInt8(0)
+                            .UInt16LE(message.length + 2)
+                            .UInt16LE(message.length)
+                            .string(message)
+                            .make();
+        crc = new CRC(messageBuffer.toString('latin1'))
+        crcvalue = new BufferMaker()
+                            .UInt16LE(crc.Get())
+                            .make()
+
+        messageBuffer = Buffer.concat( [messageBuffer, crcvalue] )
+
+        udp_socket.send(messageBuffer, jamServerPort, 'localhost');
     })
     socket.on("disconnecting", () => {
         if (connectedClients[socket.id] != undefined ) {
