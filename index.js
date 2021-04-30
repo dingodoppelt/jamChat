@@ -23,34 +23,14 @@ app.use(express.static(path.join(__dirname + '/public')))
 
 io.on('connection', socket => {
     fs.createReadStream(csvFile).pipe(parse({ delimiter: ';' }, processData));
-    socket.on('clientInfo', (userName) => {
-        io.emit('userConnected', userName)
-        for (const [id, [name, ip]] of Object.entries(connectedClients)) {
-            socket.emit('userConnected', name);
-        }
-        connectedClients[socket.id] = [ userName, socket.client.conn.remoteAddress ]
-        console.log(connectedClients);
-    })
     socket.on('chat', (user, message) => {
-        const BufferMaker = require('buffermaker')
-        message = '<b>***Message from listener ' + user + ':</b> ' + message;
-        var id = 1019;
-        var messageBuffer = new BufferMaker()
-                            .UInt16LE(0x0000)
-                            .UInt16LE(id)
-                            .UInt8(0)
-                            .UInt16LE(message.length + 2)
-                            .UInt16LE(message.length)
-                            .string(message)
-                            .make();
-        crc = new CRC(messageBuffer.toString('latin1'))
-        crcvalue = new BufferMaker()
-                            .UInt16LE(crc.Get())
-                            .make()
-
-        messageBuffer = Buffer.concat( [messageBuffer, crcvalue] )
-
-        udp_socket.send(messageBuffer, jamServerPort, 'localhost');
+        if (socket.id in connectedClients === true) {
+            createAndSendBuffer(user, message)
+        } else {
+            socket.emit('resetUsersView')
+            registerUser(socket, user)
+            createAndSendBuffer(user, message)
+        }
     })
     socket.on("disconnecting", () => {
         if (connectedClients[socket.id] != undefined ) {
@@ -61,7 +41,7 @@ io.on('connection', socket => {
     })
 
 JamChat.on('data', data => {
-        io.emit('chat', data.toString())
+        io.emit('chat', data.toString('latin1'))
 })
 
 class User {
@@ -75,6 +55,7 @@ class User {
     this.skill = skill;
   }
 }
+
 
 const processData = (err, data) => {
     if (err) {
@@ -94,6 +75,39 @@ const processData = (err, data) => {
         result += '</tr>';
     });
     io.emit('users', result);
+}
+
+const registerUser = (socket, userName) => {
+    socket.emit('resetUsersView')
+    io.emit('userConnected', userName)
+    for (const [id, [name, ip]] of Object.entries(connectedClients)) {
+        socket.emit('userConnected', name);
+    }
+    connectedClients[socket.id] = [ userName, socket.client.conn.remoteAddress ]
+    console.log(connectedClients);
+}
+
+const createAndSendBuffer = (user, message) => {
+    const BufferMaker = require('buffermaker')
+    message = '<b>***Message from listener ' + user + ':</b> ' + message;
+    message = Buffer.from(message, 'utf8')
+    var id = 1019; // external chat message jamulus protocol id
+    var messageBuffer = new BufferMaker()
+                        .UInt16LE(0x0000)
+                        .UInt16LE(id)
+                        .UInt8(0)
+                        .UInt16LE(message.length + 2)
+                        .UInt16LE(message.length)
+                        .string(message)
+                        .make();
+    crc = new CRC(messageBuffer.toString('latin1'))
+    crcvalue = new BufferMaker()
+                        .UInt16LE(crc.Get())
+                        .make()
+
+    messageBuffer = Buffer.concat( [messageBuffer, crcvalue] )
+
+    udp_socket.send(messageBuffer, jamServerPort, 'localhost');
 }
 
 fs.watchFile(csvFile, ()=> {

@@ -12,7 +12,6 @@ function PlaySound() {
 }
 
 socket.emit('chat', userName.value, '...connected');
-socket.emit('clientInfo', userName.value);
 
 chat.addEventListener('submit', event => {
   event.preventDefault()
@@ -35,7 +34,11 @@ socket.on('userConnected', userName => {
 })
 
 socket.on('userDisconnected', userName => {
-  document.querySelector(`.${userName}-userlist`).remove();
+    document.querySelector(`.${userName}-userlist`).remove();
+});
+
+socket.on('resetUsersView', () => {
+    activeUsers.innerHTML = ''
 });
 
 const renderMessage = message => {
