@@ -29,7 +29,7 @@ io.on('connection', socket => {
         } else {
             socket.emit('resetUsersView')
             registerUser(socket, user)
-            createAndSendBuffer(user, message)
+            // createAndSendBuffer(user, message)
         }
     })
     socket.on("disconnecting", () => {
