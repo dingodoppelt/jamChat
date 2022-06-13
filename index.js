@@ -1,35 +1,50 @@
-var jamServerPort = 22124;
-var chatFile = '/tmp/JamChat-'+jamServerPort;
-var csvFile = '/tmp/JamulusClients.csv';
-const express = require('express')
-const app = express()
-const server = require('http').createServer(app)
+import jamulusRpcInterface from './RPCmodule.mjs';
+import * as fs from 'fs';
+import express from 'express';
+import * as http from 'http';
+import { Server } from "socket.io";
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 const port = process.env.PORT || 32123
-const io = require('socket.io')(server)
-const path = require('path')
-var fs = require('fs');
-var parse = require("csv-parse");
-var JamChat=fs.createReadStream(chatFile);
+const RPC = new jamulusRpcInterface(8765, 'jamulusRPCsecret.txt');
 var connectedClients = {};
-const dgram = require('dgram');
-const udp_socket = dgram.createSocket('udp4');
-const CRC = require('./CRC.js')
+app.use(express.static('./public'))
 
-server.listen(port, () => {
-  console.log(`Server running on port: ${port}`)
-})
-
-app.use(express.static(path.join(__dirname + '/public')))
+RPC.jamRPCServer.on('data', (data) => {
+    data = data.toString().split('\n');
+    data.forEach( (row) => {
+        if (row != '') {
+            let parsed = JSON.parse(row);
+//             console.log(row);
+            switch (parsed.method) {
+                case 'jamulusserver/chatMessageReceived':
+                    io.emit('chat', parsed.params.chatMessage)
+                    break;
+                case 'jamulusserver/clientConnected':
+                    RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    break;
+                case 'jamulusserver/clientDisconnected':
+                    RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    break;
+                default:
+                    if (parsed.result.clients != undefined) {
+                        processData(parsed.result.clients);
+                    }
+                    break;
+            }
+        }
+    })
+});
 
 io.on('connection', socket => {
-    fs.createReadStream(csvFile).pipe(parse({ delimiter: ';' }, processData));
     socket.on('chat', (user, message) => {
         if (socket.id in connectedClients === true) {
             createAndSendBuffer(user, message)
         } else {
             socket.emit('resetUsersView')
             registerUser(socket, user)
-            // createAndSendBuffer(user, message)
         }
     })
     socket.on("disconnecting", () => {
@@ -38,10 +53,6 @@ io.on('connection', socket => {
             delete connectedClients[socket.id]
         }
     })
-})
-
-JamChat.on('data', data => {
-        io.emit('chat', data.toString('utf8'))
 })
 
 class User {
@@ -57,21 +68,15 @@ class User {
 }
 
 
-const processData = (err, data) => {
-    if (err) {
-        console.log(`An error was encountered: ${err}`);
-        return;
-    }
-    data.shift(); // only required if csv has heading row
-    const userList = data.map(row => new User(...row));
-    result = '<tr><th>name</th><th>instrument</th><th>city</th><th>country</th><th>skill</th></tr>';
-    userList.forEach( function(user) {
+const processData = (data) => {
+    let result = '<tr><th>name</th><th>instrument</th><th>city</th><th>country</th><th>skill</th></tr>';
+    data.forEach( element => {
         result += '<tr>';
-        result += '<td>'+ user.name +'</td>';
-        result += '<td>'+ user.instrument +'</td>';
-        result += '<td>'+ user.city +'</td>';
-        result += '<td>'+ user.country +'</td>';
-        result += '<td>'+ user.skill +'</td>';
+        result += '<td>'+ element.name +'</td>';
+        result += '<td>'+ element.instr +'</td>';
+        result += '<td>'+ element.city +'</td>';
+        result += '<td>'+ element.country +'</td>';
+        result += '<td>'+ element.skill +'</td>';
         result += '</tr>';
     });
     io.emit('users', result);
@@ -88,28 +93,10 @@ const registerUser = (socket, userName) => {
 }
 
 const createAndSendBuffer = (user, message) => {
-    const BufferMaker = require('buffermaker')
     message = '<b>***Message from listener ' + user + ':</b> ' + message;
-    message = Buffer.from(message, 'utf8')
-    var id = 1019; // external chat message jamulus protocol id
-    var messageBuffer = new BufferMaker()
-                        .UInt16LE(0x0000)
-                        .UInt16LE(id)
-                        .UInt8(0)
-                        .UInt16LE(message.length + 2)
-                        .UInt16LE(message.length)
-                        .string(message)
-                        .make();
-    crc = new CRC(messageBuffer.toString('latin1'))
-    crcvalue = new BufferMaker()
-                        .UInt16LE(crc.Get())
-                        .make()
-
-    messageBuffer = Buffer.concat( [messageBuffer, crcvalue] )
-
-    udp_socket.send(messageBuffer, jamServerPort, 'localhost');
+    RPC.jamRPCServer.write('{"id":"chat","jsonrpc":"2.0","method":"jamulusserver/broadcastChatMessage","params":{"chatMessage":"' + message + '"}}\n');
 }
 
-fs.watchFile(csvFile, ()=> {
-    fs.createReadStream(csvFile).pipe(parse({ delimiter: ';' }, processData));
+server.listen(port, () => {
+  console.log(`Server running on port: ${port}`)
 });

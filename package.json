@@ -2,10 +2,9 @@
   "name": "jamchat",
   "version": "1.0.0",
   "description": "tool to chat with a jamulus server running on the same machine",
+  "type": "module",
   "main": "index.js",
   "dependencies": {
-    "buffermaker": "^1.2.1",
-    "csv-parse": "^4.15.4",
     "express": "^4.17.1",
     "socket.io": "^4.0.1"
   },
