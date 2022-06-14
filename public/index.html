@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title>JamChat</title>
-  </head>
     <link rel="stylesheet" href="styles.css">
+  </head>
   <body>
     <div class="container">
       <fieldset id="chatSection">
@@ -27,7 +27,7 @@
         <div class="active_users"></div>
       </fieldset>
       <div class="break"></div>
-      <!-- <audio controls preload="none"><source src="" type="audio/ogg"></source><source src="" type="audio/mp3"></audio> -->
+      <span id="linktostream"></span>
       <div class="break"></div>
       <table id="usersTable" class="usersTable"></table>
     </div>
@@ -44,6 +44,7 @@
     }
     </script>
     <script src="socket.io/socket.io.js"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

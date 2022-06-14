@@ -1,5 +1,4 @@
 import jamulusRpcInterface from './RPCmodule.mjs';
-import * as fs from 'fs';
 import express from 'express';
 import * as http from 'http';
 import { Server } from "socket.io";
@@ -7,31 +6,59 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const port = process.env.PORT || 32123
-const RPC = new jamulusRpcInterface(8765, 'jamulusRPCsecret.txt');
+let port = 32123;
+let secret = '/var/opt/jamulusRPCSecret.txt';
+let rpcPort = 8765;
+let link_to_stream = 'link_to_stream';
+process.argv.slice(2).forEach((val) => {
+    val = val.split('=')
+    switch (val[0]) {
+        case 'jamChatHttpPort':
+            port = val[1];
+            break;
+        case 'jamulusRPCSecretFilePath':
+            secret = val[1];
+            break;
+        case 'jamRPCPort':
+            rpcPort = val[1];
+            break;
+        case 'jamStreamLink':
+            link_to_stream = val[1];
+            break;
+        default:
+            break;
+    }
+    console.log(`${val}`);
+});
+const RPC = new jamulusRpcInterface(rpcPort, secret);
 var connectedClients = {};
+
 app.use(express.static('./public'))
 
 RPC.jamRPCServer.on('data', (data) => {
     data = data.toString().split('\n');
     data.forEach( (row) => {
-        if (row != '') {
+        if (row && !row.error) {
             let parsed = JSON.parse(row);
-//             console.log(row);
+            if (parsed.id && parsed.id == 'getInfo') {
+                processData(parsed.result.clients);
+                return;
+            }
             switch (parsed.method) {
                 case 'jamulusserver/chatMessageReceived':
                     io.emit('chat', parsed.params.chatMessage)
                     break;
                 case 'jamulusserver/clientConnected':
-                    RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    setTimeout(function() {
+                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    }, 100);
                     break;
                 case 'jamulusserver/clientDisconnected':
-                    RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    setTimeout(function() {
+                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                    }, 100);
                     break;
                 default:
-                    if (parsed.result.clients != undefined) {
-                        processData(parsed.result.clients);
-                    }
                     break;
             }
         }
@@ -43,6 +70,7 @@ io.on('connection', socket => {
         if (socket.id in connectedClients === true) {
             createAndSendBuffer(user, message)
         } else {
+            RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
             socket.emit('resetUsersView')
             registerUser(socket, user)
         }
@@ -89,7 +117,7 @@ const registerUser = (socket, userName) => {
         socket.emit('userConnected', name);
     }
     connectedClients[socket.id] = [ userName, socket.client.conn.remoteAddress ]
-    console.log(connectedClients);
+//     console.log(connectedClients);
 }
 
 const createAndSendBuffer = (user, message) => {

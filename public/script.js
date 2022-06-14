@@ -5,13 +5,12 @@ const chatWindow = document.querySelector('.chat-window')
 const activeUsers = document.querySelector('.active_users')
 const userName = document.getElementById('name')
 const usersTable = document.querySelector('.usersTable')
+const streamLink = document.getElementById('linktostream')
 
 function PlaySound() {
   var sound = new Audio("sounds/new_message.wav");
   sound.play();
 }
-
-socket.emit('chat', userName.value, '...connected');
 
 chat.addEventListener('submit', event => {
   event.preventDefault()
@@ -20,6 +19,7 @@ chat.addEventListener('submit', event => {
       Input.value = ''
   }
 })
+
 socket.io.on('reconnect', () => {
     socket.emit('chat', userName.value, '...reconnected');
 })
@@ -59,3 +59,12 @@ const showUser = user => {
   div.innerHTML = user
   activeUsers.appendChild(div)
 }
+
+if (typeof streamOgg !== 'undefined' || typeof streamMp3 !== 'undefined') {
+    let streamHtml = '<audio controls preload="none">';
+    if (typeof streamOgg !== 'undefined') streamHtml += '<source src="'+ streamOgg +'" type="audio/ogg">';
+    if (typeof streamMp3 !== 'undefined') streamHtml += '<source src="'+ streamMp3 +'" type="audio/mp3">';
+    streamHtml += 'Your browser does not support the audio tag</audio>'
+    streamLink.innerHTML = streamHtml;
+}
+socket.emit('chat', userName.value, '...connected');
