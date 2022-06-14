@@ -50,12 +50,12 @@ RPC.jamRPCServer.on('data', (data) => {
                 case 'jamulusserver/clientConnected':
                     setTimeout(function() {
                         RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
-                    }, 100);
+                    }, 500);
                     break;
                 case 'jamulusserver/clientDisconnected':
                     setTimeout(function() {
                         RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
-                    }, 100);
+                    }, 500);
                     break;
                 default:
                     break;
