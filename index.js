@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 let port = 32123;
-let secret = '/var/opt/jamulusRPCSecret.txt';
+let secret = 'jamulusRPCSecret.txt';
 let rpcPort = 8765;
 let link_to_stream = 'link_to_stream';
 process.argv.slice(2).forEach((val) => {
@@ -28,7 +28,6 @@ process.argv.slice(2).forEach((val) => {
         default:
             break;
     }
-    console.log(`${val}`);
 });
 const RPC = new jamulusRpcInterface(rpcPort, secret);
 var connectedClients = {};

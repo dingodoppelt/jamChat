@@ -9,7 +9,7 @@ export default class jamulusRpcInterface {
     constructor(RPCPORT, SECRET_file) {
         this.#authenticated = false;
         this.#RPCPORT = RPCPORT;
-        this.#RPCHOST = 'localhost';
+        this.#RPCHOST = '127.0.0.1';
         this.#SECRET = readFileSync(SECRET_file, 'utf8', (err, data) => {
             if (err) {
                 console.error(err);
