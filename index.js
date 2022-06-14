@@ -1,4 +1,4 @@
-import jamulusRpcInterface from './RPCmodule.mjs';
+import jamulusRpcInterface from './jamulusrpcclient/RPCmodule.mjs';
 import express from 'express';
 import * as http from 'http';
 import { Server } from "socket.io";

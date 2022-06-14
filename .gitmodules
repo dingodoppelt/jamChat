@@ -1,0 +1,3 @@
+[submodule "jamulusrpcclient"]
+	path = jamulusrpcclient
+	url = git@github.com:dingodoppelt/jamulusrpcclient.git
