@@ -49,12 +49,12 @@ RPC.jamRPCServer.on('data', (data) => {
                     break;
                 case 'jamulusserver/clientConnected':
                     setTimeout(function() {
-                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
                     }, 500);
                     break;
                 case 'jamulusserver/clientDisconnected':
                     setTimeout(function() {
-                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
                     }, 500);
                     break;
                 default:
@@ -69,7 +69,7 @@ io.on('connection', socket => {
         if (socket.id in connectedClients === true) {
             createAndSendBuffer(user, message)
         } else {
-            RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getCompleteClientInfo","params":{}}\n');
+            RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
             socket.emit('resetUsersView')
             registerUser(socket, user)
         }
