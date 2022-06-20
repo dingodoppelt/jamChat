@@ -36,9 +36,15 @@ app.use(express.static('./public'))
 
 RPC.jamRPCServer.on('data', (data) => {
     data = data.toString().split('\n');
-    data.forEach( (row) => {
+    for (const row of data) {
+        let parsed = {};
         if (row && !row.error) {
-            let parsed = JSON.parse(row);
+            try {
+                parsed = JSON.parse(row);
+            } catch (e) {
+                console.log(`${e.name}: ${e.message}`);
+                return;
+            }
             if (parsed.id && parsed.id == 'getInfo') {
                 processData(parsed.result.clients);
                 return;
@@ -61,7 +67,7 @@ RPC.jamRPCServer.on('data', (data) => {
                     break;
             }
         }
-    })
+    }
 });
 
 io.on('connection', socket => {
