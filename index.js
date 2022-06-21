@@ -31,6 +31,7 @@ process.argv.slice(2).forEach((val) => {
 });
 const RPC = new jamulusRpcInterface(rpcPort, secret);
 var connectedClients = {};
+let partJson = '';
 
 app.use(express.static('./public'))
 
@@ -42,12 +43,28 @@ RPC.jamRPCServer.on('data', (data) => {
             try {
                 parsed = JSON.parse(row);
             } catch (e) {
-                console.log(`${e.name}: ${e.message}`);
-                return;
+                if (e instanceof SyntaxError) {
+                    if (e.message.split(' ')[1] == 'end') {
+                        console.log(`${e.name}: ${e.message}`);
+                        partJson = row;
+                        continue;
+                    }
+                    else if (e.message.split(' ')[1] == 'token') {
+                        console.log(`${e.name}: ${e.message}`);
+                        partJson += row;
+                        try {
+                            parsed = JSON.parse(partJson);
+                            partJson = '';
+                            console.log('successfully parsed')
+                        } catch (e) {
+                            continue;
+                        }
+                    }
+                }
             }
-            if (parsed.id && parsed.id == 'getInfo') {
+            if (parsed.id && parsed.id == 'getInfo' && parsed.result) {
                 processData(parsed.result.clients);
-                return;
+                continue;
             }
             switch (parsed.method) {
                 case 'jamulusserver/chatMessageReceived':
