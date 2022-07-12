@@ -90,7 +90,7 @@ RPC.jamRPCServer.on('data', (data) => {
 io.on('connection', socket => {
     socket.on('chat', (user, message) => {
         if (socket.id in connectedClients === true) {
-            createAndSendBuffer(user, message)
+            createAndSendBuffer(user, message.replace(/"/g,'\''))
         } else {
             RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
             socket.emit('resetUsersView')
