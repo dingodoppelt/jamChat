@@ -7,8 +7,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 let port = 32123;
-let secret = 'jamulusRPCSecret.txt';
-let rpcPort = 8765;
+let secret = process.env.JSONRPCSECRETFILE || 'jamulusRPCSecret.txt';
+let rpcPort = process.env.JSONRPCPORT || 8765;
 let link_to_stream = 'link_to_stream';
 process.argv.slice(2).forEach((val) => {
     val = val.split('=')
