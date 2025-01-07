@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-let port = 32123;
+let port = process.env.JAMCHATPORT || 32123;
 let secret = process.env.JSONRPCSECRETFILE || 'jamulusRPCSecret.txt';
 let rpcPort = process.env.JSONRPCPORT || 8765;
 let streamUrl = process.env.STREAMURL;
