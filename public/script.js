@@ -7,6 +7,19 @@ const userName = document.getElementById('name')
 const usersTable = document.querySelector('.usersTable')
 const streamLink = document.getElementById('linktostream')
 
+fetch('/config')
+    .then(response => response.json())
+    .then(config => {
+        const streamMp3 = config.streamUrl;
+        if (typeof streamOgg !== 'undefined' || typeof streamMp3 !== 'undefined') {
+            let streamHtml = '<audio controls preload="none">';
+            if (typeof streamOgg !== 'undefined') streamHtml += '<source src="'+ streamOgg +'" type="audio/ogg">';
+            if (typeof streamMp3 !== 'undefined') streamHtml += '<source src="'+ streamMp3 +'" type="audio/mp3">';
+            streamHtml += 'Your browser does not support the audio tag</audio>'
+            streamLink.innerHTML = streamHtml;
+        }
+    });
+
 function PlaySound() {
   var sound = new Audio("sounds/new_message.wav");
   sound.play();
@@ -60,11 +73,4 @@ const showUser = user => {
   activeUsers.appendChild(div)
 }
 
-if (typeof streamOgg !== 'undefined' || typeof streamMp3 !== 'undefined') {
-    let streamHtml = '<audio controls preload="none">';
-    if (typeof streamOgg !== 'undefined') streamHtml += '<source src="'+ streamOgg +'" type="audio/ogg">';
-    if (typeof streamMp3 !== 'undefined') streamHtml += '<source src="'+ streamMp3 +'" type="audio/mp3">';
-    streamHtml += 'Your browser does not support the audio tag</audio>'
-    streamLink.innerHTML = streamHtml;
-}
 socket.emit('chat', userName.value, '...connected');
