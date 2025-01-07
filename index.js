@@ -9,7 +9,7 @@ const io = new Server(server);
 let port = 32123;
 let secret = process.env.JSONRPCSECRETFILE || 'jamulusRPCSecret.txt';
 let rpcPort = process.env.JSONRPCPORT || 8765;
-let link_to_stream = 'link_to_stream';
+let streamUrl = process.env.STREAMURL;
 process.argv.slice(2).forEach((val) => {
     val = val.split('=')
     switch (val[0]) {
@@ -23,7 +23,7 @@ process.argv.slice(2).forEach((val) => {
             rpcPort = val[1];
             break;
         case 'jamStreamLink':
-            link_to_stream = val[1];
+            streamUrl = val[1];
             break;
         default:
             break;
@@ -146,6 +146,10 @@ const createAndSendBuffer = (user, message) => {
     message = '<b>***Message from listener ' + user + ':</b> ' + message;
     RPC.jamRPCServer.write('{"id":"chat","jsonrpc":"2.0","method":"jamulusserver/broadcastChatMessage","params":{"chatMessage":"' + message + '"}}\n');
 }
+
+app.get('/config', (req, res) => {
+    res.json({ streamUrl });
+});
 
 server.listen(port, () => {
   console.log(`Server running on port: ${port}`)
