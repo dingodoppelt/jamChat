@@ -6,145 +6,137 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+// Konfiguration über Umgebungsvariablen oder Default-Werte
 let port = process.env.JAMCHATPORT || 32123;
 let secret = process.env.JSONRPCSECRETFILE || 'jamulusRPCSecret.txt';
 let rpcPort = process.env.JSONRPCPORT || 8765;
 let streamUrl = process.env.STREAMURL;
+
+// Argument-Parsing (CLI)
 process.argv.slice(2).forEach((val) => {
-    val = val.split('=')
-    switch (val[0]) {
-        case 'jamChatHttpPort':
-            port = val[1];
-            break;
-        case 'jamulusRPCSecretFilePath':
-            secret = val[1];
-            break;
-        case 'jamRPCPort':
-            rpcPort = val[1];
-            break;
-        case 'jamStreamLink':
-            streamUrl = val[1];
-            break;
-        default:
-            break;
+    const parts = val.split('=');
+    switch (parts[0]) {
+        case 'jamChatHttpPort': port = parts[1]; break;
+        case 'jamulusRPCSecretFilePath': secret = parts[1]; break;
+        case 'jamRPCPort': rpcPort = parts[1]; break;
+        case 'jamStreamLink': streamUrl = parts[1]; break;
     }
 });
+
 const RPC = new jamulusRpcInterface(rpcPort, secret);
-var connectedClients = {};
-let partJson = '';
+const connectedClients = {};
+let rpcBuffer = ''; // Puffer für fragmentierte TCP-Pakete
 
-app.use(express.static('./public'))
+app.use(express.static('./public'));
 
+// --- ROBUSTER RPC DATA HANDLER ---
 RPC.jamRPCServer.on('data', (data) => {
-    data = data.toString().split('\n');
-    for (const row of data) {
-        let parsed = {};
-        if (row && !row.error) {
-            try {
-                parsed = JSON.parse(row);
-            } catch (e) {
-                if (e instanceof SyntaxError) {
-                    if (e.message.split(' ')[1] == 'end') {
-                        console.log(`${e.name}: ${e.message}`);
-                        partJson = row;
-                        continue;
-                    }
-                    else if (e.message.split(' ')[1] == 'token') {
-                        console.log(`${e.name}: ${e.message}`);
-                        partJson += row;
-                        try {
-                            parsed = JSON.parse(partJson);
-                            partJson = '';
-                            console.log('successfully parsed')
-                        } catch (e) {
-                            continue;
-                        }
-                    }
-                }
-            }
-            if (parsed.id && parsed.id == 'getInfo' && parsed.result) {
+    rpcBuffer += data.toString();
+    let lines = rpcBuffer.split('\n');
+    
+    // Das letzte Element ist entweder leer (bei \n am Ende) oder ein unvollständiges JSON
+    rpcBuffer = lines.pop(); 
+
+    for (const row of lines) {
+        if (!row.trim()) continue;
+
+        try {
+            const parsed = JSON.parse(row);
+
+            // Spezialfall: Antwort auf getClientDetails
+            if (parsed.id === 'getInfo' && parsed.result) {
                 processData(parsed.result.clients);
                 continue;
             }
+
+            // Notifications verarbeiten
             switch (parsed.method) {
                 case 'jamulusserver/chatMessageReceived':
-                    io.emit('chat', parsed.params.chatMessage)
+                    io.emit('chat', parsed.params.chatMessage);
                     break;
                 case 'jamulusserver/clientConnected':
-                    setTimeout(function() {
-                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
-                    }, 500);
-                    break;
                 case 'jamulusserver/clientDisconnected':
-                    setTimeout(function() {
-                        RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
+                    // Kurze Verzögerung, damit Jamulus den internen Status aktualisieren kann
+                    setTimeout(() => {
+                        sendRpcRequest("jamulusserver/getClientDetails", {}, "getInfo");
                     }, 500);
-                    break;
-                default:
                     break;
             }
+        } catch (e) {
+            console.error("RPC Parse Error:", e.message, "Row:", row);
         }
     }
 });
 
+// Fehlerbehandlung für den Socket
+RPC.jamRPCServer.on('error', (err) => {
+    console.error("RPC Socket Error:", err.message);
+});
+
+// --- SOCKET.IO LOGIK ---
 io.on('connection', socket => {
     socket.on('chat', (user, message) => {
-        if (socket.id in connectedClients === true) {
-            createAndSendBuffer(user, message.replace(/"/g,'\''))
+        if (connectedClients[socket.id]) {
+            // HTML-Injection im Chat verhindern (einfaches Escaping)
+            const cleanMsg = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            broadcastToJamulus(user, cleanMsg);
         } else {
-            RPC.jamRPCServer.write('{"id":"getInfo","jsonrpc":"2.0","method":"jamulusserver/getClientDetails","params":{}}\n');
-            socket.emit('resetUsersView')
-            registerUser(socket, user)
+            sendRpcRequest("jamulusserver/getClientDetails", {}, "getInfo");
+            socket.emit('resetUsersView');
+            registerUser(socket, user);
         }
-    })
-    socket.on("disconnecting", () => {
-        if (connectedClients[socket.id] != undefined ) {
-            io.emit('userDisconnected', connectedClients[socket.id][0])
-            delete connectedClients[socket.id]
-        }
-    })
-})
+    });
 
-class User {
-  constructor(name, ip, city, country, instrument, instrumentPicture, skill) {
-    this.name = name;
-    this.ip = ip;
-    this.city = city;
-    this.country = country;
-    this.instrument = instrument;
-    this.instrumentPicture = instrumentPicture;
-    this.skill = skill;
-  }
+    socket.on("disconnecting", () => {
+        if (connectedClients[socket.id]) {
+            io.emit('userDisconnected', connectedClients[socket.id][0]);
+            delete connectedClients[socket.id];
+        }
+    });
+});
+
+// --- HILFSFUNKTIONEN ---
+
+/**
+ * Sendet eine sicher formatierte RPC-Anfrage
+ */
+function sendRpcRequest(method, params = {}, requestId = "node_req") {
+    const payload = JSON.stringify({
+        id: requestId,
+        jsonrpc: "2.0",
+        method: method,
+        params: params
+    }) + "\n";
+    RPC.jamRPCServer.write(payload);
 }
 
+/**
+ * Sendet eine Chat-Nachricht an den Jamulus Server (Sicher gegen Injection)
+ */
+function broadcastToJamulus(user, message) {
+    const formattedMsg = `<b>***Message from listener ${user}:</b> ${message}`;
+    sendRpcRequest("jamulusserver/broadcastChatMessage", { chatMessage: formattedMsg }, "chat");
+}
 
-const processData = (data) => {
+const processData = (clients) => {
     let result = '<tr><th>name</th><th>instrument</th><th>city</th><th>country</th><th>skill</th></tr>';
-    data.forEach( element => {
-        result += '<tr>';
-        result += '<td>'+ element.name +'</td>';
-        result += '<td>'+ element.instr +'</td>';
-        result += '<td>'+ element.city +'</td>';
-        result += '<td>'+ element.country +'</td>';
-        result += '<td>'+ element.skill +'</td>';
-        result += '</tr>';
+    clients.forEach(el => {
+        result += `<tr><td>${el.name}</td><td>${el.instr}</td><td>${el.city}</td><td>${el.country}</td><td>${el.skill}</td></tr>`;
     });
     io.emit('users', result);
 }
 
 const registerUser = (socket, userName) => {
-    socket.emit('resetUsersView')
-    io.emit('userConnected', userName)
-    for (const [id, [name, ip]] of Object.entries(connectedClients)) {
-        socket.emit('userConnected', name);
+    socket.emit('resetUsersView');
+    io.emit('userConnected', userName);
+    
+    // Bestehende User an den neuen Client senden
+    for (const [id, data] of Object.entries(connectedClients)) {
+        socket.emit('userConnected', data[0]);
     }
-    connectedClients[socket.id] = [ userName, socket.client.conn.remoteAddress ]
-//     console.log(connectedClients);
-}
-
-const createAndSendBuffer = (user, message) => {
-    message = '<b>***Message from listener ' + user + ':</b> ' + message;
-    RPC.jamRPCServer.write('{"id":"chat","jsonrpc":"2.0","method":"jamulusserver/broadcastChatMessage","params":{"chatMessage":"' + message + '"}}\n');
+    
+    connectedClients[socket.id] = [userName, socket.client.conn.remoteAddress];
 }
 
 app.get('/config', (req, res) => {
@@ -152,5 +144,5 @@ app.get('/config', (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Server running on port: ${port}`)
+    console.log(`Server running on port: ${port}`);
 });
