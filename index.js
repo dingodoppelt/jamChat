@@ -9,7 +9,7 @@ const io = new Server(server);
 
 // Konfiguration über Umgebungsvariablen oder Default-Werte
 let port = process.env.JAMCHATPORT || 32123;
-let secret = process.env.JSONRPCSECRETFILE || 'jamulusRPCSecret.txt';
+let secret = process.env.JSONRPCSECRETFILE || '/var/opt/jamulusRPCsecret.txt';
 let rpcPort = process.env.JSONRPCPORT || 8765;
 let streamUrl = process.env.STREAMURL;
 
@@ -59,7 +59,7 @@ RPC.jamRPCServer.on('data', (data) => {
                 case 'jamulusserver/clientDisconnected':
                     // Kurze Verzögerung, damit Jamulus den internen Status aktualisieren kann
                     setTimeout(() => {
-                        sendRpcRequest("jamulusserver/getClientDetails", {}, "getInfo");
+                        sendRpcRequest("jamulusserver/getClients", {}, "getInfo");
                     }, 500);
                     break;
             }
@@ -82,7 +82,7 @@ io.on('connection', socket => {
             const cleanMsg = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             broadcastToJamulus(user, cleanMsg);
         } else {
-            sendRpcRequest("jamulusserver/getClientDetails", {}, "getInfo");
+            sendRpcRequest("jamulusserver/getClients", {}, "getInfo");
             socket.emit('resetUsersView');
             registerUser(socket, user);
         }
@@ -122,7 +122,7 @@ function broadcastToJamulus(user, message) {
 const processData = (clients) => {
     let result = '<tr><th>name</th><th>instrument</th><th>city</th><th>country</th><th>skill</th></tr>';
     clients.forEach(el => {
-        result += `<tr><td>${el.name}</td><td>${el.instr}</td><td>${el.city}</td><td>${el.country}</td><td>${el.skill}</td></tr>`;
+        result += `<tr><td>${el.name}</td><td>${getInstrumentName(el.instrumentCode)}</td><td>${el.city}</td><td>${el.countryName}</td><td>${getSkillName(el.skillLevelCode)}</td></tr>`;
     });
     io.emit('users', result);
 }
@@ -146,3 +146,77 @@ app.get('/config', (req, res) => {
 server.listen(port, () => {
     console.log(`Server running on port: ${port}`);
 });
+
+const instruments = [
+    "None",                // 0
+    "Drum Set",            // 1
+    "Djembe",              // 2
+    "Electric Guitar",     // 3
+    "Acoustic Guitar",     // 4
+    "Bass Guitar",         // 5
+    "Keyboard",            // 6
+    "Synthesizer",         // 7
+    "Grand Piano",         // 8
+    "Accordion",           // 9
+    "Vocal",               // 10
+    "Microphone",          // 11
+    "Harmonica",           // 12
+    "Trumpet",             // 13
+    "Trombone",            // 14
+    "French Horn",         // 15
+    "Tuba",                // 16
+    "Saxophone",           // 17
+    "Clarinet",            // 18
+    "Flute",               // 19
+    "Violin",              // 20
+    "Cello",               // 21
+    "Double Bass",         // 22
+    "Recorder",            // 23
+    "Streamer",            // 24
+    "Listener",            // 25
+    "Guitar+Vocal",        // 26
+    "Keyboard+Vocal",      // 27
+    "Bodhran",             // 28
+    "Bassoon",             // 29
+    "Oboe",                // 30
+    "Harp",                // 31
+    "Viola",               // 32
+    "Congas",              // 33
+    "Bongo",               // 34
+    "Vocal Bass",          // 35
+    "Vocal Tenor",         // 36
+    "Vocal Alto",          // 37
+    "Vocal Soprano",       // 38
+    "Banjo",               // 39
+    "Mandolin",            // 40
+    "Ukulele",             // 41
+    "Bass Ukulele",        // 42
+    "Vocal Baritone",      // 43
+    "Vocal Lead",          // 44
+    "Mountain Dulcimer",   // 45
+    "Scratching",          // 46
+    "Rapping",             // 47
+    "Vibraphone",          // 48
+    "Conductor"            // 49
+];
+
+const skillLevels = [
+    "none",
+    "Beginner",
+    "Intermediate",
+    "Expert"
+]
+
+function getInstrumentName(id) {
+    if (id < 0 || id >= instruments.length) {
+        return "Unknown Instrument"; 
+    }
+    return instruments[id];
+}
+
+function getSkillName(id) {
+    if (id < 0 || id >= skillLevels.length) {
+        return "Unknown skill"; 
+    }
+    return skillLevels[id];
+}
