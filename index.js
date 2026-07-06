@@ -122,7 +122,7 @@ function broadcastToJamulus(user, message) {
 const processData = (clients) => {
     let result = '<tr><th>name</th><th>instrument</th><th>city</th><th>country</th><th>skill</th></tr>';
     clients.forEach(el => {
-        result += `<tr><td>${el.name}</td><td>${getInstrumentName(el.instrumentCode)}</td><td>${el.city}</td><td>${el.countryName}</td><td>${getSkillName(el.skillLevelCode)}</td></tr>`;
+        result += `<tr><td>${el.name}</td><td>${INSTRUMENTS.get(el.instrumentCode, "Unknown Instrument")}</td><td>${el.city}</td><td>${el.countryName}</td><td>${SKILL_LEVELS.get(el.skillLevelCode, "")}</td></tr>`;
     });
     io.emit('users', result);
 }
@@ -147,76 +147,25 @@ server.listen(port, () => {
     console.log(`Server running on port: ${port}`);
 });
 
-const instruments = [
-    "None",                // 0
-    "Drum Set",            // 1
-    "Djembe",              // 2
-    "Electric Guitar",     // 3
-    "Acoustic Guitar",     // 4
-    "Bass Guitar",         // 5
-    "Keyboard",            // 6
-    "Synthesizer",         // 7
-    "Grand Piano",         // 8
-    "Accordion",           // 9
-    "Vocal",               // 10
-    "Microphone",          // 11
-    "Harmonica",           // 12
-    "Trumpet",             // 13
-    "Trombone",            // 14
-    "French Horn",         // 15
-    "Tuba",                // 16
-    "Saxophone",           // 17
-    "Clarinet",            // 18
-    "Flute",               // 19
-    "Violin",              // 20
-    "Cello",               // 21
-    "Double Bass",         // 22
-    "Recorder",            // 23
-    "Streamer",            // 24
-    "Listener",            // 25
-    "Guitar+Vocal",        // 26
-    "Keyboard+Vocal",      // 27
-    "Bodhran",             // 28
-    "Bassoon",             // 29
-    "Oboe",                // 30
-    "Harp",                // 31
-    "Viola",               // 32
-    "Congas",              // 33
-    "Bongo",               // 34
-    "Vocal Bass",          // 35
-    "Vocal Tenor",         // 36
-    "Vocal Alto",          // 37
-    "Vocal Soprano",       // 38
-    "Banjo",               // 39
-    "Mandolin",            // 40
-    "Ukulele",             // 41
-    "Bass Ukulele",        // 42
-    "Vocal Baritone",      // 43
-    "Vocal Lead",          // 44
-    "Mountain Dulcimer",   // 45
-    "Scratching",          // 46
-    "Rapping",             // 47
-    "Vibraphone",          // 48
-    "Conductor"            // 49
-];
-
-const skillLevels = [
-    "none",
-    "Beginner",
-    "Intermediate",
-    "Expert"
-]
-
-function getInstrumentName(id) {
-    if (id < 0 || id >= instruments.length) {
-        return "Unknown Instrument"; 
-    }
-    return instruments[id];
+INSTRUMENTS = {
+    0: "None", 1: "Drum Set", 2: "Djembe", 3: "Electric Guitar",
+    4: "Acoustic Guitar", 5: "Bass Guitar", 6: "Keyboard", 7: "Synthesizer",
+    8: "Grand Piano", 9: "Accordion", 10: "Vocal", 11: "Microphone",
+    12: "Harmonica", 13: "Trumpet", 14: "Trombone", 15: "French Horn",
+    16: "Tuba", 17: "Saxophone", 18: "Clarinet", 19: "Flute",
+    20: "Violin", 21: "Cello", 22: "Double Bass", 23: "Recorder",
+    24: "Streamer", 25: "Listener", 26: "Guitar+Vocal", 27: "Keyboard+Vocal",
+    28: "Bodhran", 29: "Bassoon", 30: "Oboe", 31: "Harp",
+    32: "Viola", 33: "Congas", 34: "Bongo", 35: "Vocal Bass",
+    36: "Vocal Tenor", 37: "Vocal Alto", 38: "Vocal Soprano", 39: "Banjo",
+    40: "Mandolin", 41: "Ukulele", 42: "Bass Ukulele", 43: "Vocal Baritone",
+    44: "Vocal Lead", 45: "Mountain Dulcimer", 46: "Scratching", 47: "Rapping",
+    48: "Vibraphone", 49: "Conductor"
 }
 
-function getSkillName(id) {
-    if (id < 0 || id >= skillLevels.length) {
-        return "Unknown skill"; 
-    }
-    return skillLevels[id];
+SKILL_LEVELS = {
+    0: "none",
+    1: "Beginner",
+    2: "Intermediate",
+    3: "Expert"
 }
